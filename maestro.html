@@ -34,6 +34,7 @@
 
   maestro.prototype.match = function(queryPath) {
     queryPath = this.normalize(queryPath).split('/');
+    
     for (var i=0,j=this._routes.length; i<j; i++) {
       var knownPath = this._routes[i].path.split('/');
       
@@ -42,7 +43,10 @@
       }
       
       var params = {};
+      var context = {};
       var foundMatch = true;
+      var fn = this._routes[i].fn;
+      
       for (var a=0,b=queryPath.length; a<b; a++) {
         if (knownPath[a] != queryPath[a] && knownPath[a].charAt(0) != ":") {
           foundMatch = false;
@@ -54,9 +58,9 @@
       }
       
       if (foundMatch) {
-        var fn = this._routes[i].fn;
+        context.params = params;
         return function() {
-          return fn.apply(this, [params]);
+          return fn.call(context);
         }
       }
     }
@@ -81,11 +85,12 @@
 var m = new maestro;
 
 m.route('/foo/:baz', function() {
-  console.log(arguments);
+  console.log("baz is", this.params.baz);
   console.log('foo route');
 });
 
 m.route('/foo', function() {
+  console.log(this.params);
   console.log(arguments);
   console.log('true foo route');
 });
