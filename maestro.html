@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <title>maestro</title>
+
+</head>
+
+<body id="maestro" onload="">
+
+  <div id="one">
+    <a href="#/one">one</a>
+  </div>
+  <div id="two">
+    <a href="#/two">two</a>
+  </div>
+
+</body>
+<script type="text/javascript" charset="utf-8">
+(function(context){
+  var maestro = function() {
+    this._routes = [];
+    this._headFilter = /^[\#\!\/]+/;
+    this._tailFilter = /[\/]+$/;
+  };
+
+  maestro.prototype.normalize = function(path) {
+    return path.replace(this._headFilter, '').replace(this._tailFilter, '');
+  }
+
+  maestro.prototype.route = function(path, fn) {    
+    this._routes.push({path: this.normalize(path), fn: fn});
+  };
+
+  maestro.prototype.match = function(queryPath) {
+    queryPath = this.normalize(queryPath).split('/');
+    for (var i=0,j=this._routes.length; i<j; i++) {
+      var knownPath = this._routes[i].path.split('/');
+      
+      if (queryPath.length != knownPath.length) {
+        continue;
+      }
+      
+      var params = {};
+      var foundMatch = true;
+      for (var a=0,b=queryPath.length; a<b; a++) {
+        if (knownPath[a] != queryPath[a] && knownPath[a].charAt(0) != ":") {
+          foundMatch = false;
+          break;
+        } else if (knownPath[a].charAt(0) == ":") {
+          var part = knownPath[a].slice(1,knownPath[a].length);
+          params[part] = queryPath[a];
+        }
+      }
+      
+      if (foundMatch) {
+        var fn = this._routes[i].fn;
+        return function() {
+          return fn.apply(this, [params]);
+        }
+      }
+    }
+  };
+
+  maestro.prototype.routes = function(routes) {
+    for(var route in routes) {
+      maestro._route(route, routes[route]);
+    }
+  };
+
+  this.maestro = maestro;
+})(this);
+
+/*
+  support the following:
+
+  /foo/bar
+  /foo/bar/:id
+*/
+
+var m = new maestro;
+
+m.route('/foo/:baz', function() {
+  console.log(arguments);
+  console.log('foo route');
+});
+
+m.route('/foo', function() {
+  console.log(arguments);
+  console.log('true foo route');
+});
+
+window.addEventListener('hashchange', function() {
+  console.log(window.location.hash);
+  var action = m.match(window.location.hash);
+  if (action) action();
+}, false);
+
+
+// maestro.routes({
+//   "/foo/baz": function() {
+//     console.log('foo2');
+//   },
+//   "/foo/:fiz": function() {
+//     console.log(this.params.fiz);
+//   },
+//   "/bar": function() {
+//     console.log('bar');
+//   }
+// })
+
+</script>
+</html>
